@@ -14,6 +14,8 @@ on:
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: ${{ secrets.GCP_REGION }}
+  SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+  WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
   REPO: services
   SERVICE_NAME: compliance-agent
   SERVICE_DIR: services/compliance_agent
@@ -32,11 +34,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # ── 2. Authenticate to GCP ───────────────────────────────────────────
+      # ── 2. Authenticate to GCP via Workload Identity Federation (keyless) ──
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
 
       # ── 3. Set up gcloud CLI ─────────────────────────────────────────────
       - name: Set up Cloud SDK
