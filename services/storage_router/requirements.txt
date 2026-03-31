@@ -1,0 +1,5 @@
+fastapi==0.109.2
+uvicorn==0.27.1
+google-cloud-pubsub==2.19.0
+google-cloud-bigquery==3.17.2
+vertexai==1.38.1

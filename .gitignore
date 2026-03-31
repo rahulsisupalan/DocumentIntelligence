@@ -1,0 +1,63 @@
+# ============================================================
+# .gitignore — GCP Document Intelligence Project
+# ============================================================
+
+# ── Secrets & Credentials ────────────────────────────────────
+.env
+*.json.key
+service-account*.json
+gcloud-credentials*.json
+application_default_credentials.json
+github-actions-sa-key.json
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# ── Virtual Environments ─────────────────────────────────────
+venv/
+.venv/
+env/
+.env.local
+.env.*.local
+
+# ── Jupyter Notebooks (outputs & checkpoints) ────────────────
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ── Terraform State & Secrets ────────────────────────────────
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfstate.lock.info
+terraform/.terraform.lock.hcl
+terraform/terraform.tfvars
+terraform/*.auto.tfvars
+
+# ── Node / Frontend ──────────────────────────────────────────
+node_modules/
+frontend/.next/
+frontend/build/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# ── IDE & OS ─────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Logs ─────────────────────────────────────────────────────
+*.log
+logs/

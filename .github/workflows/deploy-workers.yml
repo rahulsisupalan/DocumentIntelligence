@@ -1,0 +1,78 @@
+name: Deploy — Workers
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Triggers ONLY when files inside services/workers/ change on main branch
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "services/workers/**"
+  workflow_dispatch: # Allow manual trigger from GitHub Actions UI
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ secrets.GCP_REGION }}
+  REPO: services
+  SERVICE_NAME: workers
+  SERVICE_DIR: services/workers
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy Workers
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      # ── 1. Checkout code ──────────────────────────────────────────────────
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ── 2. Authenticate to GCP ───────────────────────────────────────────
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # ── 3. Set up gcloud CLI ─────────────────────────────────────────────
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      # ── 4. Configure Docker for Artifact Registry ────────────────────────
+      - name: Configure Docker Auth
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      # ── 5. Build & Push image via Cloud Build ────────────────────────────
+      - name: Build & Push Image via Cloud Build
+        run: |
+          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          gcloud builds submit ${{ env.SERVICE_DIR }} \
+            --tag "$IMAGE" \
+            --project "${{ env.PROJECT_ID }}"
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
+      # ── 6. Deploy to Cloud Run ───────────────────────────────────────────
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image "$IMAGE" \
+            --region "${{ env.REGION }}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars "PROJECT_ID=${{ env.PROJECT_ID }},REGION=${{ env.REGION }},ENV=dev" \
+            --project "${{ env.PROJECT_ID }}"
+
+      # ── 7. Print deployed URL ────────────────────────────────────────────
+      - name: Get Service URL
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} \
+            --format="value(status.url)")
+          echo "✅ Workers deployed at: $URL"
