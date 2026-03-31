@@ -106,6 +106,8 @@ async def handle_new_document(request: Request):
         "document_type": doc_type,
     }
 
+
+
     if "INVOICE" in doc_type:
         publish_to_topic(INVOICE_TOPIC, downstream_payload)
     elif "CONTRACT" in doc_type:
