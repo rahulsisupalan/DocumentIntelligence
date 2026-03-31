@@ -57,6 +57,7 @@ jobs:
           IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
           gcloud builds submit ${{ env.SERVICE_DIR }} \
             --tag "$IMAGE" \
+            --suppress-logs \
             --project "${{ env.PROJECT_ID }}"
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
