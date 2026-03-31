@@ -9,7 +9,8 @@ on:
       - main
     paths:
       - "services/compliance_agent/**"
-  workflow_dispatch: # Allow manual trigger from GitHub Actions UI
+      - ".github/workflows/deploy-compliance-agent.yml"
+  workflow_dispatch:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -30,38 +31,32 @@ jobs:
       id-token: write
 
     steps:
-      # ── 1. Checkout code ──────────────────────────────────────────────────
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # ── 2. Authenticate to GCP via Workload Identity Federation (keyless) ──
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.SERVICE_ACCOUNT }}
 
-      # ── 3. Set up gcloud CLI ─────────────────────────────────────────────
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      # ── 4. Configure Docker for Artifact Registry ────────────────────────
       - name: Configure Docker Auth
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-      # ── 5. Build & Push image via Cloud Build ────────────────────────────
-      - name: Build & Push Image via Cloud Build
+      - name: Build Docker Image
         run: |
           IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
-          gcloud builds submit ${{ env.SERVICE_DIR }} \
-            --tag "$IMAGE" \
-            --suppress-logs \
-            --project "${{ env.PROJECT_ID }}"
+          docker build -t "$IMAGE" ${{ env.SERVICE_DIR }}
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
-      # ── 6. Deploy to Cloud Run ───────────────────────────────────────────
+      - name: Push Image to Artifact Registry
+        run: docker push "$IMAGE"
+
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ env.SERVICE_NAME }} \
@@ -72,7 +67,6 @@ jobs:
             --set-env-vars "PROJECT_ID=${{ env.PROJECT_ID }},REGION=${{ env.REGION }},ENV=dev" \
             --project "${{ env.PROJECT_ID }}"
 
-      # ── 7. Print deployed URL ────────────────────────────────────────────
       - name: Get Service URL
         run: |
           URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
